@@ -3,7 +3,7 @@
 ## Overview
 
 This repository contains a RESTful service that calculates factorials of given integers using goroutines. 
-The service utilizes the httprouter package for creating the server and provides an endpoint for factorial calculation.
+The service utilizes the `httprouter` package for creating the server and provides an endpoint for factorial calculation.
 The service will start and listen on port 8989.
 
 ## Usage

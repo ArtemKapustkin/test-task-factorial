@@ -25,7 +25,7 @@ func ValidateJSON(next httprouter.Handle) httprouter.Handle {
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, "error occurs when read request body", http.StatusInternalServerError)
+			http.Error(w, "error reading request body", http.StatusInternalServerError)
 			return
 		}
 

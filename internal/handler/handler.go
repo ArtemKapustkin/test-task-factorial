@@ -32,7 +32,8 @@ func (h *FactorialHandler) Calculate(w http.ResponseWriter, r *http.Request, _ h
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("error occurs when read request body: %s", err)
+		http.Error(w, "error reading request body", http.StatusInternalServerError)
+		return
 	}
 
 	defer func() {
@@ -47,11 +48,11 @@ func (h *FactorialHandler) Calculate(w http.ResponseWriter, r *http.Request, _ h
 		return
 	}
 
-	res1, res2 := h.calculator.Calculate(requestBody.A, requestBody.B)
+	factorialA, factorialB := h.calculator.Calculate(requestBody.A, requestBody.B)
 
 	response := map[string]uint64{
-		"factorial A": res1,
-		"factorial B": res2,
+		"factorial A": factorialA,
+		"factorial B": factorialB,
 	}
 
 	responseJSON, err := json.Marshal(response)
