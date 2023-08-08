@@ -1,11 +1,10 @@
 package middleware
 
 import (
-	"bytes"
-	"encoding/json"
+	"github.com/ArtemKapustkin/test-task-factorial/internal/common"
+	"github.com/ArtemKapustkin/test-task-factorial/pkg"
 	"github.com/go-playground/validator/v10"
 	"github.com/julienschmidt/httprouter"
-	"io"
 	"log"
 	"net/http"
 )
@@ -14,56 +13,40 @@ var (
 	validate = validator.New()
 )
 
-type calculatorDTO struct {
-	A *int `json:"a" validate:"required,gte=0"`
-	B *int `json:"b" validate:"required,gte=0"`
-}
-
 func ValidateJSON(next httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		var requestBody calculatorDTO
+		incorrectInput := map[string]interface{}{
+			"error": "Incorrect input",
+		}
 
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "error reading request body", http.StatusInternalServerError)
+		dto, httpErr := common.ParseCalculatorDTO(r)
+		if httpErr != nil {
+			setResponse(w, incorrectInput, http.StatusBadRequest)
 			return
 		}
 
-		err = json.Unmarshal(body, &requestBody)
+		err := validate.Struct(dto)
 		if err != nil {
-			http.Error(w, "error parsing JSON", http.StatusBadRequest)
+			setResponse(w, incorrectInput, http.StatusBadRequest)
 			return
 		}
 
-		err = validate.Struct(requestBody)
-		if err != nil {
-			response := map[string]string{
-				"error": "Incorrect input",
-			}
-
-			responseJSON, err := json.Marshal(response)
-			if err != nil {
-				http.Error(w, "error encoding JSON", http.StatusInternalServerError)
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-
-			_, err = w.Write(responseJSON)
-			if err != nil {
-				http.Error(w, "error writing http reply", http.StatusInternalServerError)
-				return
-			}
-		} else {
-			if err := r.Body.Close(); err != nil {
-				log.Printf("error closing request body: %s", err)
-			}
-
-			r.Body = io.NopCloser(bytes.NewBuffer(body))
-
-			next(w, r, ps)
+		if err := r.Body.Close(); err != nil {
+			log.Printf("error closing request body: %s", err)
 		}
+
+		next(w, r, ps)
+	}
+}
+
+func setResponse(w http.ResponseWriter, description map[string]interface{}, statusCode int) {
+	responseJSON, httpErr := pkg.CreateJSONResponse(description)
+	if httpErr != nil {
+		http.Error(w, httpErr.Error(), httpErr.GetStatusCode())
 	}
 
+	httpErr = pkg.WriteJSONResponse(w, responseJSON, statusCode)
+	if httpErr != nil {
+		http.Error(w, httpErr.Error(), httpErr.GetStatusCode())
+	}
 }

@@ -13,6 +13,7 @@ func NewFactorialCalculator() *FactorialCalculator {
 
 func (c *FactorialCalculator) factorial(num int) uint64 {
 	var result uint64 = 1
+
 	for num > 1 {
 		result *= uint64(num)
 		num -= 1
