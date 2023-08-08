@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
+	"github.com/ArtemKapustkin/test-task-factorial/internal/common"
+	"github.com/ArtemKapustkin/test-task-factorial/pkg"
 	"github.com/julienschmidt/httprouter"
-	"io"
 	"log"
 	"net/http"
 )
@@ -22,18 +22,10 @@ func NewFactorialHandler(calculator Calculator) *FactorialHandler {
 	}
 }
 
-type calculatorDTO struct {
-	A int `json:"a"`
-	B int `json:"b"`
-}
-
 func (h *FactorialHandler) Calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var requestBody calculatorDTO
-
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "error reading request body", http.StatusInternalServerError)
-		return
+	dto, httpErr := common.ParseCalculatorDTO(r)
+	if httpErr != nil {
+		http.Error(w, httpErr.Error(), httpErr.GetStatusCode())
 	}
 
 	defer func() {
@@ -42,31 +34,20 @@ func (h *FactorialHandler) Calculate(w http.ResponseWriter, r *http.Request, _ h
 		}
 	}()
 
-	err = json.Unmarshal(body, &requestBody)
-	if err != nil {
-		http.Error(w, "error parsing JSON", http.StatusBadRequest)
-		return
-	}
+	factorialA, factorialB := h.calculator.Calculate(*dto.A, *dto.B)
 
-	factorialA, factorialB := h.calculator.Calculate(requestBody.A, requestBody.B)
-
-	response := map[string]uint64{
+	response := map[string]interface{}{
 		"factorial A": factorialA,
 		"factorial B": factorialB,
 	}
 
-	responseJSON, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, "error encoding JSON", http.StatusInternalServerError)
-		return
+	responseJSON, httpErr := pkg.CreateJSONResponse(response)
+	if httpErr != nil {
+		http.Error(w, httpErr.Error(), httpErr.GetStatusCode())
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
-	_, err = w.Write(responseJSON)
-	if err != nil {
-		http.Error(w, "error writing http reply", http.StatusInternalServerError)
-		return
+	httpErr = pkg.WriteJSONResponse(w, responseJSON, http.StatusOK)
+	if httpErr != nil {
+		http.Error(w, httpErr.Error(), httpErr.GetStatusCode())
 	}
-
 }
